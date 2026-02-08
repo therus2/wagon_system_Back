@@ -500,21 +500,30 @@ class ComposeSaveView(APIView):
         response = HttpResponse(content_type='application/pdf')
         filename = f"Состав_{now.strftime('%Y%m%d_%H%M%S')}.pdf"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
         
-        # Регистрируем шрифт с поддержкой кириллицы (используем встроенный DejaVu Sans)
-        # Если шрифт не найден, используем стандартный Helvetica с UTF-8
+        # Регистрируем кириллический шрифт
+        # Используем Arial, так как он точно есть в Windows
+        font_path = r"C:\Windows\Fonts\arial.ttf"
+        font_bold_path = r"C:\Windows\Fonts\arialbd.ttf"  # Arial Bold
+        
         try:
-            # Пытаемся использовать системный шрифт с кириллицей
-            font_path = "C:\Windows\Fonts\DejaVuSans.ttf"
-
+            # Регистрируем обычный шрифт
             if os.path.exists(font_path):
-                pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
-                font_name = 'DejaVuSans'
+                pdfmetrics.registerFont(TTFont("CustomFont", font_path))
+                font_name = "CustomFont"
+                
+                # Регистрируем жирный шрифт для заголовков
+                if os.path.exists(font_bold_path):
+                    pdfmetrics.registerFont(TTFont("CustomFont-Bold", font_bold_path))
+                else:
+                    # Если жирный шрифт не найден, используем обычный для заголовков
+                    pdfmetrics.registerFont(TTFont("CustomFont-Bold", font_path))
             else:
-                # Используем стандартный подход с UTF-8
+                # Если Arial не найден, используем Helvetica
                 font_name = 'Helvetica'
-        except:
+        except Exception as e:
+            # Если шрифт не найден, откатываемся на Helvetica (но кириллица пропадет)
+            print(f"Ошибка регистрации шрифта: {e}")
             font_name = 'Helvetica'
         
         # Создаем PDF документ
@@ -684,7 +693,7 @@ class ComposeSaveView(APIView):
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, 0), (-1, 0), f'{font_name}-Bold' if font_name != 'Helvetica' else 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), 'CustomFont-Bold' if font_name == 'CustomFont' else 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 7),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
             ('TOPPADDING', (0, 0), (-1, 0), 8),
